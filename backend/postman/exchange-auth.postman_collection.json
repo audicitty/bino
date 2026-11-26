@@ -1,0 +1,830 @@
+{
+  "info": {
+    "name": "Exchange - Auth API",
+    "description": "Tests for /health and /api/auth/{signup,signin,me,logout}. Run the whole collection in order with the Collection Runner. Each run creates a fresh unique user. Postman's cookie jar carries the session cookie between requests.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:4000"
+    },
+    {
+      "key": "testEmail",
+      "value": ""
+    },
+    {
+      "key": "testUsername",
+      "value": "Student"
+    },
+    {
+      "key": "testPassword",
+      "value": "password123"
+    }
+  ],
+  "item": [
+    {
+      "name": "01 Health check",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// New unique account for every run of the collection",
+              "const stamp = Date.now();",
+              "pm.collectionVariables.set(\"testEmail\", `student_${stamp}@example.com`);",
+              "pm.collectionVariables.set(\"testUsername\", \"Student\");",
+              "pm.collectionVariables.set(\"testPassword\", \"password123\");"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+              "pm.test(\"Body is { ok: true }\", () => pm.expect(pm.response.json()).to.eql({ ok: true }));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/health",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "health"
+          ]
+        },
+        "description": ""
+      }
+    },
+    {
+      "name": "02 Signup - invalid input (short password)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status is 400\", () => pm.response.to.have.status(400));",
+              "pm.test(\"Message is \\\"Invalid input\\\"\", () => pm.expect(pm.response.json().message).to.eql(\"Invalid input\"));",
+              "pm.test(\"No session cookie set\", () => pm.expect(pm.response.headers.has(\"Set-Cookie\")).to.be.false);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/auth/signup",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "auth",
+            "signup"
+          ]
+        },
+        "description": "",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"Student\",\n  \"email\": \"{{testEmail}}\",\n  \"password\": \"short\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "03 Signup - invalid input (bad email)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status is 400\", () => pm.response.to.have.status(400));",
+              "pm.test(\"Message is \\\"Invalid input\\\"\", () => pm.expect(pm.response.json().message).to.eql(\"Invalid input\"));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/auth/signup",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "auth",
+            "signup"
+          ]
+        },
+        "description": "",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"Student\",\n  \"email\": \"not-an-email\",\n  \"password\": \"password123\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "04 Signup - invalid input (missing username)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status is 400\", () => pm.response.to.have.status(400));",
+              "pm.test(\"Message is \\\"Invalid input\\\"\", () => pm.expect(pm.response.json().message).to.eql(\"Invalid input\"));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/auth/signup",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "auth",
+            "signup"
+          ]
+        },
+        "description": "",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{testEmail}}\",\n  \"password\": \"password123\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "05 Signup - success",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status is 201\", () => pm.response.to.have.status(201));",
+              "pm.test(\"Returns the public user only\", () => {",
+              "  const { user } = pm.response.json();",
+              "  pm.expect(user).to.have.all.keys(\"id\", \"username\", \"email\");",
+              "  pm.expect(user.id).to.be.a(\"string\").and.not.empty;",
+              "  pm.expect(user.email).to.eql(pm.collectionVariables.get(\"testEmail\"));",
+              "  pm.expect(user.username).to.eql(pm.collectionVariables.get(\"testUsername\"));",
+              "});",
+              "pm.test(\"welcomeEmail result is preview, sent or failed\", () => {",
+              "  pm.expect(pm.response.json().welcomeEmail).to.be.oneOf([\"preview\", \"sent\", \"failed\"]);",
+              "});",
+              "pm.test(\"Session cookie is set and HttpOnly\", () => {",
+              "  const setCookie = [].concat(pm.response.headers.get(\"Set-Cookie\") || []).join(\";\");",
+              "  pm.expect(setCookie).to.include(\"session=\");",
+              "  pm.expect(setCookie).to.include(\"HttpOnly\");",
+              "  pm.expect(setCookie).to.include(\"SameSite=Lax\");",
+              "  pm.expect(setCookie).to.include(\"Path=/\");",
+              "});",
+              "pm.test(\"Response never leaks password or JWT\", () => {",
+              "  const raw = pm.response.text();",
+              "  pm.expect(raw).to.not.include(\"password\");",
+              "  pm.expect(raw).to.not.match(/eyJ[A-Za-z0-9_-]+\\./);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/auth/signup",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "auth",
+            "signup"
+          ]
+        },
+        "description": "Creates the account, sends the welcome email and signs the user in with an HttpOnly cookie.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"{{testUsername}}\",\n  \"email\": \"{{testEmail}}\",\n  \"password\": \"{{testPassword}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "06 Signup - duplicate email",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status is 409\", () => pm.response.to.have.status(409));",
+              "pm.test(\"Message is \\\"Email is already registered\\\"\", () => pm.expect(pm.response.json().message).to.eql(\"Email is already registered\"));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/auth/signup",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "auth",
+            "signup"
+          ]
+        },
+        "description": "",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"Someone Else\",\n  \"email\": \"{{testEmail}}\",\n  \"password\": \"{{testPassword}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "07 Signup - email is case-insensitive",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// Same email in upper case must still be treated as a duplicate",
+              "pm.request.body.update(JSON.stringify({",
+              "  username: \"Someone Else\",",
+              "  email: pm.collectionVariables.get(\"testEmail\").toUpperCase(),",
+              "  password: pm.collectionVariables.get(\"testPassword\"),",
+              "}));"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status is 409\", () => pm.response.to.have.status(409));",
+              "pm.test(\"Message is \\\"Email is already registered\\\"\", () => pm.expect(pm.response.json().message).to.eql(\"Email is already registered\"));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/auth/signup",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "auth",
+            "signup"
+          ]
+        },
+        "description": "",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"Someone Else\",\n  \"email\": \"{{testEmail}}\",\n  \"password\": \"{{testPassword}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "08 Me - signed in (cookie from signup)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+              "pm.test(\"Returns the public user only\", () => {",
+              "  const { user } = pm.response.json();",
+              "  pm.expect(user).to.have.all.keys(\"id\", \"username\", \"email\");",
+              "  pm.expect(user.id).to.be.a(\"string\").and.not.empty;",
+              "  pm.expect(user.email).to.eql(pm.collectionVariables.get(\"testEmail\"));",
+              "  pm.expect(user.username).to.eql(pm.collectionVariables.get(\"testUsername\"));",
+              "});",
+              "pm.test(\"Response never leaks password or JWT\", () => {",
+              "  const raw = pm.response.text();",
+              "  pm.expect(raw).to.not.include(\"password\");",
+              "  pm.expect(raw).to.not.match(/eyJ[A-Za-z0-9_-]+\\./);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/auth/me",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "auth",
+            "me"
+          ]
+        },
+        "description": ""
+      }
+    },
+    {
+      "name": "09 Logout",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+              "pm.test(\"Message is \\\"Signed out\\\"\", () => pm.expect(pm.response.json().message).to.eql(\"Signed out\"));",
+              "pm.test(\"Session cookie is cleared\", () => {",
+              "  const setCookie = [].concat(pm.response.headers.get(\"Set-Cookie\") || []).join(\";\");",
+              "  pm.expect(setCookie).to.include(\"session=;\");",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/auth/logout",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "auth",
+            "logout"
+          ]
+        },
+        "description": ""
+      }
+    },
+    {
+      "name": "10 Me - after logout (no cookie)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status is 401\", () => pm.response.to.have.status(401));",
+              "pm.test(\"Message is \\\"Please sign in\\\"\", () => pm.expect(pm.response.json().message).to.eql(\"Please sign in\"));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/auth/me",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "auth",
+            "me"
+          ]
+        },
+        "description": ""
+      }
+    },
+    {
+      "name": "11 Me - tampered token",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status is 401\", () => pm.response.to.have.status(401));",
+              "pm.test(\"Message is \\\"Please sign in again\\\"\", () => pm.expect(pm.response.json().message).to.eql(\"Please sign in again\"));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Cookie",
+            "value": "session=not.a.valid.jwt"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/auth/me",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "auth",
+            "me"
+          ]
+        },
+        "description": ""
+      }
+    },
+    {
+      "name": "12 Signin - invalid input (short password)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status is 400\", () => pm.response.to.have.status(400));",
+              "pm.test(\"Message is \\\"Invalid input\\\"\", () => pm.expect(pm.response.json().message).to.eql(\"Invalid input\"));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/auth/signin",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "auth",
+            "signin"
+          ]
+        },
+        "description": "",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{testEmail}}\",\n  \"password\": \"short\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "13 Signin - invalid input (bad email)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status is 400\", () => pm.response.to.have.status(400));",
+              "pm.test(\"Message is \\\"Invalid input\\\"\", () => pm.expect(pm.response.json().message).to.eql(\"Invalid input\"));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/auth/signin",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "auth",
+            "signin"
+          ]
+        },
+        "description": "",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"nope\",\n  \"password\": \"password123\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "14 Signin - wrong password",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status is 401\", () => pm.response.to.have.status(401));",
+              "pm.test(\"Message is \\\"Invalid email or password\\\"\", () => pm.expect(pm.response.json().message).to.eql(\"Invalid email or password\"));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/auth/signin",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "auth",
+            "signin"
+          ]
+        },
+        "description": "",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{testEmail}}\",\n  \"password\": \"wrong-password-1\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "15 Signin - unknown email (same error as wrong password)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status is 401\", () => pm.response.to.have.status(401));",
+              "pm.test(\"Message is \\\"Invalid email or password\\\"\", () => pm.expect(pm.response.json().message).to.eql(\"Invalid email or password\"));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/auth/signin",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "auth",
+            "signin"
+          ]
+        },
+        "description": "",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"nobody_{{$timestamp}}@example.com\",\n  \"password\": \"password123\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "16 Signin - success",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+              "pm.test(\"Returns the public user only\", () => {",
+              "  const { user } = pm.response.json();",
+              "  pm.expect(user).to.have.all.keys(\"id\", \"username\", \"email\");",
+              "  pm.expect(user.id).to.be.a(\"string\").and.not.empty;",
+              "  pm.expect(user.email).to.eql(pm.collectionVariables.get(\"testEmail\"));",
+              "  pm.expect(user.username).to.eql(pm.collectionVariables.get(\"testUsername\"));",
+              "});",
+              "pm.test(\"Session cookie is set and HttpOnly\", () => {",
+              "  const setCookie = [].concat(pm.response.headers.get(\"Set-Cookie\") || []).join(\";\");",
+              "  pm.expect(setCookie).to.include(\"session=\");",
+              "  pm.expect(setCookie).to.include(\"HttpOnly\");",
+              "  pm.expect(setCookie).to.include(\"SameSite=Lax\");",
+              "  pm.expect(setCookie).to.include(\"Path=/\");",
+              "});",
+              "pm.test(\"Response never leaks password or JWT\", () => {",
+              "  const raw = pm.response.text();",
+              "  pm.expect(raw).to.not.include(\"password\");",
+              "  pm.expect(raw).to.not.match(/eyJ[A-Za-z0-9_-]+\\./);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/auth/signin",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "auth",
+            "signin"
+          ]
+        },
+        "description": "",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{testEmail}}\",\n  \"password\": \"{{testPassword}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "17 Me - after signin",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+              "pm.test(\"Returns the public user only\", () => {",
+              "  const { user } = pm.response.json();",
+              "  pm.expect(user).to.have.all.keys(\"id\", \"username\", \"email\");",
+              "  pm.expect(user.id).to.be.a(\"string\").and.not.empty;",
+              "  pm.expect(user.email).to.eql(pm.collectionVariables.get(\"testEmail\"));",
+              "  pm.expect(user.username).to.eql(pm.collectionVariables.get(\"testUsername\"));",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/auth/me",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "auth",
+            "me"
+          ]
+        },
+        "description": ""
+      }
+    },
+    {
+      "name": "18 Logout (cleanup)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+              "pm.test(\"Message is \\\"Signed out\\\"\", () => pm.expect(pm.response.json().message).to.eql(\"Signed out\"));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/auth/logout",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "auth",
+            "logout"
+          ]
+        },
+        "description": ""
+      }
+    }
+  ]
+}
